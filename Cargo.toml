@@ -1,0 +1,16 @@
+[package]
+name = "exoshell"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "exoshell"
+crate-type = ["cdylib"]
+
+[dependencies]
+boxy = "0.1.0"
+crossterm = "0.28.1"
+pyo3 = "0.23.3"
+unicode-segmentation = "1.12.0"
+unicode-width = "0.2.0"
