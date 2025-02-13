@@ -97,8 +97,9 @@ impl Banner {
         // Otherwise, just fill between the left and right sides
 
         // e.g. 2 left components and 3 right components: need 1 fill char for left, 2 fill chars
-        // for right, hence `- 2`
-        let num_fill_chars = (left_components.len() + right_components.len()).saturating_sub(2);
+        // for right
+        let num_fill_chars =
+            left_components.len().saturating_sub(1) + right_components.len().saturating_sub(1);
         let can_join = width_remaining > num_fill_chars;
 
         if can_join {
