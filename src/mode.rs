@@ -253,6 +253,7 @@ impl Raw {
             } => match code {
                 KeyCode::Enter => (Mode::Raw(self), Some(Action::Write('\n'))),
                 KeyCode::Backspace => (Mode::Raw(self), Some(Action::Write('\u{7f}'))),
+                KeyCode::Esc => (Mode::Raw(self), Some(Action::Write('\u{1b}'))),
 
                 _ => (Mode::Raw(self), None),
             },

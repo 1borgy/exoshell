@@ -32,21 +32,25 @@ impl Border {
 
 pub struct Shell {
     border: Border,
-    title: String,
+    titles: Vec<String>,
     cols: usize,
     cursor: (usize, usize),
 }
 
 impl Shell {
-    pub fn new(title: impl ToString, cols: impl Into<usize>) -> io::Result<Self> {
+    pub fn new(cols: impl Into<usize>) -> io::Result<Self> {
         let border = Border::create(boxy::Weight::Normal, boxy::Style::Curved);
 
         Ok(Self {
             border,
-            title: title.to_string(),
+            titles: Vec::new(),
             cols: cols.into(),
             cursor: (0, 0),
         })
+    }
+
+    pub fn push_title(&mut self, title: impl ToString) {
+        self.titles.push(title.to_string());
     }
 
     pub fn write(&mut self, mode: &Mode) -> io::Result<()> {
@@ -61,8 +65,12 @@ impl Shell {
         let left = '(';
         let right = ')';
 
-        let header =
-            Banner::new(self.border.horizontal).push_left(Component::new(left, &self.title, right));
+        let header = self
+            .titles
+            .iter()
+            .fold(Banner::new(self.border.horizontal), |banner, title| {
+                banner.push_left(Component::new(left, title, right))
+            });
 
         stdout.queue(style::PrintStyledContent(
             format!(
