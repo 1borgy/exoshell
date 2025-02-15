@@ -7,6 +7,9 @@ authors = [
     { name = "1borgy", email = "149747415+1borgy@users.noreply.github.com" }
 ]
 requires-python = ">=3.8"
+dependencies = [
+    "colored>=1.4.4",
+]
 
 [tool.maturin]
 module-name = "exoshell"

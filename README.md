@@ -21,7 +21,9 @@ from exoshell import Console, Action
 import colored
 
 
-shell = Console("exoshell")
+shell = Console()
+shell.push_title("exoshell")
+
 shell.start()
 
 running = True

@@ -1,5 +1,4 @@
 use crate::banner::{Banner, Component};
-use crate::mode::Mode;
 use crossterm::{
     cursor,
     style::{self, Stylize},
@@ -30,10 +29,19 @@ impl Border {
     }
 }
 
+pub trait State {
+    fn color(&self) -> style::Color;
+    fn cursor(&self) -> usize;
+    fn contents(&self) -> &str;
+    fn name(&self) -> &str;
+    fn keybinds(&self) -> Vec<&str>;
+}
+
 pub struct Shell {
     border: Border,
     titles: Vec<String>,
     cols: usize,
+    // last *known* cursor position
     cursor: (usize, usize),
 }
 
@@ -53,12 +61,12 @@ impl Shell {
         self.titles.push(title.to_string());
     }
 
-    pub fn write(&mut self, mode: &Mode) -> io::Result<()> {
+    pub fn write(&mut self, state: &impl State) -> io::Result<()> {
         // All relative to inner content
         let width = self.cols - 2;
-        let contents = mode.contents().to_string();
-        let color = mode.color();
-        let cursor = mode.cursor();
+        let contents = state.contents().to_string();
+        let color = state.color();
+        let cursor = state.cursor();
 
         let mut stdout = io::stdout();
 
@@ -74,7 +82,7 @@ impl Shell {
 
         stdout.queue(style::PrintStyledContent(
             format!(
-                "{}{}{}\r\n",
+                "\r{}{}{}\r\n",
                 self.border.upper_left,
                 header.render(width),
                 self.border.upper_right
@@ -129,10 +137,13 @@ impl Shell {
             format!("{}\r\n", self.border.vertical).with(color),
         ))?;
 
-        let mut footer =
-            Banner::new(self.border.horizontal).push_left(Component::new(left, mode.name(), right));
+        let mut footer = Banner::new(self.border.horizontal).push_left(Component::new(
+            left,
+            state.name(),
+            right,
+        ));
 
-        for keybind in mode.keybinds() {
+        for keybind in state.keybinds() {
             footer = footer.push_right(Component::new(left, keybind, right));
         }
 
