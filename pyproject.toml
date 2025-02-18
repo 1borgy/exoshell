@@ -1,6 +1,6 @@
 [project]
 name = "exoshell"
-version = "0.1.0"
+version = "0.3.0"
 description = "A console for the terminal, written in rust."
 readme = "README.md"
 authors = [
