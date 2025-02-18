@@ -68,7 +68,6 @@ impl Console {
         if event::poll(Duration::from_nanos(timeout_ns))? {
             let event = event::read()?;
             self.shell.clear()?;
-            self.shell.flush()?;
 
             let message = match event {
                 event::Event::Key(key) => {

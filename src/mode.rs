@@ -2,7 +2,7 @@ use crate::console::Action;
 use crate::history::History;
 use crate::shell;
 use crossterm::{
-    event::{KeyCode, KeyEvent, KeyModifiers},
+    event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
     style,
 };
 
@@ -88,11 +88,13 @@ impl OnKey for Line {
     fn on_key(&mut self, key: KeyEvent) -> Option<Message> {
         match key {
             KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::NONE,
                 code: KeyCode::Home,
                 ..
             }
             | KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::CONTROL,
                 code: KeyCode::Char('a'),
                 ..
@@ -102,11 +104,13 @@ impl OnKey for Line {
             }
 
             KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::NONE,
                 code: KeyCode::End,
                 ..
             }
             | KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::CONTROL,
                 code: KeyCode::Char('e'),
                 ..
@@ -116,11 +120,13 @@ impl OnKey for Line {
             }
 
             KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::NONE,
                 code: KeyCode::Char(c),
                 ..
             }
             | KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::SHIFT,
                 code: KeyCode::Char(c),
                 ..
@@ -139,6 +145,7 @@ impl OnKey for Line {
             }
 
             KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::NONE,
                 code,
                 ..
@@ -209,6 +216,7 @@ impl OnKey for Line {
             },
 
             KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::CONTROL,
                 code,
                 ..
@@ -259,17 +267,20 @@ impl OnKey for Raw {
     fn on_key(&mut self, key: KeyEvent) -> Option<Message> {
         match key {
             KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::NONE,
                 code: KeyCode::Char(c),
                 ..
             }
             | KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::SHIFT,
                 code: KeyCode::Char(c),
                 ..
             } => Some(Message::Write(c)),
 
             KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::NONE,
                 code,
                 ..
@@ -282,6 +293,7 @@ impl OnKey for Raw {
             },
 
             KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::CONTROL,
                 code,
                 ..
@@ -352,6 +364,7 @@ impl OnKey for Prefix {
     fn on_key(&mut self, key: KeyEvent) -> Option<Message> {
         match key {
             KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::NONE,
                 code,
                 ..
@@ -364,6 +377,7 @@ impl OnKey for Prefix {
             },
 
             KeyEvent {
+                kind: KeyEventKind::Press,
                 modifiers: KeyModifiers::CONTROL,
                 code,
                 ..
