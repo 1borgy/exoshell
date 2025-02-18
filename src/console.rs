@@ -1,6 +1,10 @@
-use crossterm::{cursor, event, style, terminal, QueueableCommand};
+use crossterm::{
+    cursor,
+    event::{self, KeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
+    style, terminal, QueueableCommand,
+};
 use pyo3::prelude::*;
-use std::io;
+use std::io::{self, Write};
 use std::time::Duration;
 use unicode_width::UnicodeWidthStr;
 
@@ -68,7 +72,6 @@ impl Console {
         if event::poll(Duration::from_nanos(timeout_ns))? {
             let event = event::read()?;
             self.shell.clear()?;
-            self.shell.flush()?;
 
             let message = match event {
                 event::Event::Key(key) => {
