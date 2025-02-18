@@ -1,10 +1,6 @@
-use crossterm::{
-    cursor,
-    event::{self, KeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
-    style, terminal, QueueableCommand,
-};
+use crossterm::{cursor, event, style, terminal, QueueableCommand};
 use pyo3::prelude::*;
-use std::io::{self, Write};
+use std::io;
 use std::time::Duration;
 use unicode_width::UnicodeWidthStr;
 
