@@ -21,26 +21,22 @@ from exoshell import Console, Action
 import colored
 
 
-shell = Console("exoshell")
-shell.start()
+console = Console("exoshell", ("exoshell", "demo"))
+console.start()
 
 running = True
 while running:
-    match shell.update(1):
+    match console.update(1):
         case Action.Writeline(line):
-            shell.print(
+            console.print(
                 colored.stylize(f">> {line}", colored.Fore.YELLOW, colored.Style.BOLD)
             )
-            shell.print("\n")
-            shell.print(
-                colored.stylize(
-                    f"<< echo: {line!r}", colored.Fore.YELLOW, colored.Style.BOLD
-                )
-            )
-            shell.print("\n")
+            console.print("\n")
+            console.print(f"echo: {line!r}")
+            console.print("\n")
 
         case Action.Write(c):
-            shell.print(f"{c}")
+            console.print(f"{c}")
 
         case Action.Quit():
             running = False
@@ -48,5 +44,5 @@ while running:
         case None:
             ...
 
-shell.stop()
+console.stop()
 ```

@@ -4,7 +4,8 @@ use std::io;
 use std::time::Duration;
 use unicode_width::UnicodeWidthStr;
 
-use crate::mode::Mode;
+use crate::history::History;
+use crate::mode::Modes;
 use crate::shell::Shell;
 
 #[pyclass]
@@ -17,7 +18,7 @@ pub enum Action {
 #[pyclass]
 pub struct Console {
     shell: Shell,
-    mode: Mode,
+    modes: Modes,
     cols: u16,
     output_col: u16,
 }
@@ -25,45 +26,53 @@ pub struct Console {
 #[pymethods]
 impl Console {
     #[new]
-    pub fn new() -> PyResult<Self> {
+    pub fn new(name: String, titles: Vec<String>) -> PyResult<Self> {
         let (cols, _) = terminal::size()?;
+
+        let mut history =
+            History::load_by_name(&name).unwrap_or(History::new(&name).unwrap_or_default());
+
+        if let Err(err) = history.sort() {
+            log::warn!("could not sort history: {:?}", err)
+        }
+
+        let mut shell = Shell::new(cols)?;
+
+        for title in titles.iter() {
+            shell.push_title(title)
+        }
+
         Ok(Self {
-            shell: Shell::new(cols)?,
-            mode: Mode::default(),
+            shell,
+            modes: Modes::new(history),
             output_col: 0,
             cols,
         })
     }
 
-    pub fn push_title(&mut self, title: String) -> PyResult<()> {
-        self.shell.push_title(title);
-        Ok(())
-    }
-
     pub fn start(&mut self) -> PyResult<()> {
         terminal::enable_raw_mode()?;
-        self.shell.write(&self.mode)?;
+        self.shell.write(&self.modes)?;
         self.shell.flush()?;
         Ok(())
     }
 
     pub fn stop(&mut self) -> PyResult<()> {
-        terminal::disable_raw_mode()?;
         self.shell.clear()?;
         self.shell.flush()?;
+        terminal::disable_raw_mode()?;
         Ok(())
     }
 
-    pub fn update(&mut self, timeout: u64) -> PyResult<Option<Action>> {
-        if event::poll(Duration::from_millis(timeout))? {
+    pub fn update(&mut self, timeout_ns: u64) -> PyResult<Option<Action>> {
+        if event::poll(Duration::from_nanos(timeout_ns))? {
             let event = event::read()?;
             self.shell.clear()?;
+            self.shell.flush()?;
 
             let message = match event {
                 event::Event::Key(key) => {
-                    let (new_mode, action) = self.mode.clone().on_key(key);
-                    self.mode = new_mode;
-
+                    let action = self.modes.on_key(key);
                     action
                 }
                 event::Event::Resize(cols, _) => {
@@ -74,7 +83,7 @@ impl Console {
                 _ => None,
             };
 
-            self.shell.write(&self.mode)?;
+            self.shell.write(&self.modes)?;
             self.shell.flush()?;
 
             Ok(message)
@@ -128,7 +137,7 @@ impl Console {
             stdout.queue(cursor::MoveUp(1))?;
         }
 
-        self.shell.write(&self.mode)?;
+        self.shell.write(&self.modes)?;
         self.shell.flush()?;
 
         Ok(())

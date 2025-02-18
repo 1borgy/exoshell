@@ -1,12 +1,13 @@
 [project]
 name = "exoshell"
-version = "0.1.0"
+version = "0.3.0"
 description = "A console for the terminal, written in rust."
 readme = "README.md"
 authors = [
     { name = "1borgy", email = "149747415+1borgy@users.noreply.github.com" }
 ]
 requires-python = ">=3.8"
+dependencies = []
 
 [tool.maturin]
 module-name = "exoshell"

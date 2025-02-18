@@ -5,43 +5,43 @@ use unicode_width::UnicodeWidthStr;
 // ││
 // ╰╯
 // width=1
-// ╭<╮
+// ╭(╮
 // │ │
-// ╰<╯
+// ╰(╯
 // width=2
-// ╭<>╮
+// ╭()╮
 // │  │
-// ╰<>╯
+// ╰()╯
 // width=3
-// ╭<e>╮
+// ╭(e)╮
 // │   │
-// ╰<M>╯
+// ╰(M)╯
 // width=10
-// ╭<exoshell>╮
+// ╭(exoshell)╮
 // │          │
-// ╰<MODE>─<q>╯
+// ╰(MODE)(q )╯
 // width=24
-// ╭<exoshell>────────────╮
+// ╭(exoshell)────────────╮
 // │                      │
-// ╰<MODE>─<q Quit>─<l Li>╯
+// ╰(MODE)(q Quit)(l Line)╯
 // width=26
-// ╭<exoshell>──────────────╮
+// ╭(exoshell)──────────────╮
 // │                        │
-// ╰<MODE>─<q Quit>─<l Line>╯
-// ╭<exoshell but with long na>╮
+// ╰(MODE)─(q Quit)─(l Line)╯
+// ╭(exoshell but with long na)╮
 // │                           │
-// ╰<MODE>────<q Quit>─<l Line>╯
+// ╰(MODE)────(q Quit)─(l Line)╯
 
 // pad by unicode character width, not bytes
-pub fn pad(value: impl ToString, width: usize, fill: char) -> String {
-    let mut value = value.to_string();
-
-    for _ in 0..width.saturating_sub(UnicodeWidthStr::width(value.as_str())) {
-        value.push(fill)
-    }
-
-    value
-}
+//pub fn pad(value: impl ToString, width: usize, fill: char) -> String {
+//    let mut value = value.to_string();
+//
+//    for _ in 0..width.saturating_sub(UnicodeWidthStr::width(value.as_str())) {
+//        value.push(fill)
+//    }
+//
+//    value
+//}
 
 pub struct Banner {
     left: Vec<Component>,
