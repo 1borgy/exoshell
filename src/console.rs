@@ -2,7 +2,7 @@ use crossterm::{cursor, event, style, terminal, QueueableCommand};
 use pyo3::prelude::*;
 use std::io;
 use std::time::Duration;
-use unicode_width::UnicodeWidthStr;
+use unicode_width::UnicodeWidthChar;
 
 use crate::history::History;
 use crate::mode::Modes;
@@ -11,7 +11,7 @@ use crate::shell::Shell;
 #[pyclass]
 pub enum Action {
     Writeline(String),
-    Write(char),
+    Write(String),
     Quit(),
 }
 
@@ -101,39 +101,29 @@ impl Console {
             stdout.queue(cursor::MoveRight(self.output_col))?;
         }
 
-        let lines: Vec<_> = output.split("\n").collect();
+        stdout.queue(style::Print(&output))?;
 
-        // TODO: rewrite as an iterator over output, instead of splitting lines
-        match lines[..] {
-            [] => {}
-            [line] => {
-                // Not a full line, so add to the output col
-
-                self.output_col +=
-                    UnicodeWidthStr::width(strip_ansi_escapes::strip_str(line).as_str()) as u16;
-
-                // Constrain to window bounds
-                if self.output_col >= self.cols {
-                    self.output_col %= self.cols;
-                    stdout.queue(style::Print("\r\n"))?;
+        for c in output.chars() {
+            match c {
+                '\r' | '\n' => {
+                    self.output_col = 0;
                 }
-
-                self.output_col %= self.cols;
-                stdout.queue(style::Print(format!("{}\r\n", line)))?;
-            }
-            [.., last] => {
-                // Output col is determined by only the last line
-                self.output_col =
-                    UnicodeWidthStr::width(strip_ansi_escapes::strip_str(last).as_str()) as u16;
-
-                for line in lines.iter() {
-                    stdout.queue(style::Print(format!("{}\r\n", line)))?;
+                '\u{7f}' => {
+                    self.output_col = self.output_col.saturating_sub(1);
+                    stdout.queue(cursor::MoveLeft(2))?;
+                    stdout.queue(style::Print(" "))?;
+                    stdout.queue(cursor::MoveLeft(1))?;
+                }
+                _ => {
+                    if let Some(width) = UnicodeWidthChar::width(c) {
+                        self.output_col = (self.output_col + width as u16) % self.cols;
+                    }
                 }
             }
         }
 
-        if self.output_col == 0 {
-            stdout.queue(cursor::MoveUp(1))?;
+        if self.output_col > 0 {
+            stdout.queue(style::Print("\r\n"))?;
         }
 
         self.shell.write(&self.modes)?;
