@@ -6,13 +6,14 @@ use crossterm::{
     style,
 };
 
-#[derive(Clone)]
+#[derive(Debug)]
 pub enum Mode {
     Line,
     Raw,
     Prefix,
 }
 
+#[derive(Debug)]
 pub enum Message {
     ChangeMode(Mode),
     Writeline(String),
@@ -227,7 +228,7 @@ impl OnKey for Line {
                     self.cursor = 0;
                     None
                 }
-                KeyCode::Char('4') => Some(Message::ChangeMode(Mode::Prefix)),
+                KeyCode::Char('4') | KeyCode::Char('\\') => Some(Message::ChangeMode(Mode::Prefix)),
 
                 // TODO: C-Backspace / C-Left / C-Right
                 _ => None,
@@ -288,6 +289,7 @@ impl OnKey for Raw {
                 KeyCode::Enter => Some(Message::Write('\n')),
                 KeyCode::Backspace => Some(Message::Write('\u{7f}')),
                 KeyCode::Esc => Some(Message::Write('\u{1b}')),
+                KeyCode::Tab => Some(Message::Write('\u{09}')),
 
                 _ => None,
             },
@@ -298,7 +300,7 @@ impl OnKey for Raw {
                 code,
                 ..
             } => match code {
-                KeyCode::Char('4') => Some(Message::ChangeMode(Mode::Prefix)),
+                KeyCode::Char('4') | KeyCode::Char('\\') => Some(Message::ChangeMode(Mode::Prefix)),
 
                 KeyCode::Char('a') => Some(Message::Write('\u{1}')), // SOH
                 KeyCode::Char('b') => Some(Message::Write('\u{2}')), // STX
@@ -382,7 +384,7 @@ impl OnKey for Prefix {
                 code,
                 ..
             } => match code {
-                KeyCode::Char('4') => Some(Message::ChangeMode(Mode::Line)),
+                KeyCode::Char('4') | KeyCode::Char('\\') => Some(Message::ChangeMode(Mode::Line)),
 
                 _ => None,
             },
@@ -415,6 +417,8 @@ impl Modes {
             Mode::Raw => self.raw.on_key(key),
             Mode::Prefix => self.prefix.on_key(key),
         };
+
+        log::info!("{:?} -> {:?}\r\n", key, message);
 
         match message {
             Some(message) => match message {
