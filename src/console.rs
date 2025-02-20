@@ -96,10 +96,10 @@ impl Console {
 
         self.shell.clear()?;
 
-        //if self.output_col > 0 {
-        //    stdout.queue(cursor::MoveUp(1))?;
-        //    stdout.queue(cursor::MoveRight(self.output_col))?;
-        //}
+        if self.output_col > 0 {
+            stdout.queue(cursor::MoveUp(1))?;
+            stdout.queue(cursor::MoveRight(self.output_col))?;
+        }
 
         let lines: Vec<_> = output.split("\n").collect();
 
@@ -132,9 +132,9 @@ impl Console {
             }
         }
 
-        //if self.output_col == 0 {
-        //    stdout.queue(cursor::MoveUp(1))?;
-        //}
+        if self.output_col == 0 {
+            stdout.queue(cursor::MoveUp(1))?;
+        }
 
         self.shell.write(&self.modes)?;
         self.shell.flush()?;
