@@ -2,8 +2,7 @@ use crossterm::{cursor, event, style, terminal, QueueableCommand};
 use pyo3::prelude::*;
 use std::io;
 use std::time::Duration;
-use unicode_segmentation::UnicodeSegmentation;
-use unicode_width::UnicodeWidthStr;
+use unicode_width::UnicodeWidthChar;
 
 use crate::history::History;
 use crate::mode::Modes;
@@ -102,33 +101,23 @@ impl Console {
             stdout.queue(cursor::MoveRight(self.output_col))?;
         }
 
-        log::info!(
-            "graphemes: {:?}",
-            UnicodeSegmentation::graphemes(output.as_str(), true).collect::<Vec<_>>()
-        );
+        stdout.queue(style::Print(&output))?;
 
-        for grapheme in UnicodeSegmentation::graphemes(output.as_str(), true) {
-            stdout.queue(style::Print(grapheme))?;
-            for c in grapheme.chars() {
-                match c {
-                    '\r' | '\n' => {
-                        self.output_col = 0;
-                    }
-                    '\u{7f}' => {
-                        self.output_col -= 1;
-                        stdout.queue(cursor::MoveLeft(1))?;
-                        stdout.queue(style::Print(" "))?;
-                        stdout.queue(cursor::MoveLeft(1))?;
-                    }
-                    _ => {
-                        self.output_col = (self.output_col + 1) % self.cols;
-                    }
+        for c in output.chars() {
+            match c {
+                '\r' | '\n' => {
+                    self.output_col = 0;
                 }
-            }
-            stdout.queue(style::Print(grapheme))?;
-            for c in grapheme.chars() {
-                match c {
-                    _ => (),
+                '\u{7f}' => {
+                    self.output_col = self.output_col.saturating_sub(1);
+                    stdout.queue(cursor::MoveLeft(1))?;
+                    stdout.queue(style::Print(" "))?;
+                    stdout.queue(cursor::MoveLeft(1))?;
+                }
+                _ => {
+                    if let Some(width) = UnicodeWidthChar::width(c) {
+                        self.output_col = (self.output_col + width as u16) % self.cols;
+                    }
                 }
             }
         }
