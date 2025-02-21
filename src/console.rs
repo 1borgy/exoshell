@@ -111,7 +111,7 @@ impl Console {
                 '\u{7f}' => {
                     self.output_col = self.output_col.saturating_sub(1);
                     stdout.queue(cursor::MoveLeft(1))?;
-                    stdout.queue(style::Print(" "))?;
+                    stdout.queue(style::Print("*"))?;
                     stdout.queue(cursor::MoveLeft(1))?;
                 }
                 _ => {
