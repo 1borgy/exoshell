@@ -109,7 +109,6 @@ impl Console {
 
         for grapheme in UnicodeSegmentation::graphemes(output.as_str(), true) {
             stdout.queue(style::Print(grapheme))?;
-            self.output_col = (self.output_col + 1) % self.cols;
             for c in grapheme.chars() {
                 match c {
                     '\r' | '\n' => {
@@ -117,7 +116,18 @@ impl Console {
                     }
                     '\u{7f}' => {
                         self.output_col -= 1;
+                        stdout.queue(cursor::MoveLeft(1))?;
+                        stdout.queue(style::Print(" "))?;
+                        stdout.queue(cursor::MoveLeft(1))?;
                     }
+                    _ => {
+                        self.output_col = (self.output_col + 1) % self.cols;
+                    }
+                }
+            }
+            stdout.queue(style::Print(grapheme))?;
+            for c in grapheme.chars() {
+                match c {
                     _ => (),
                 }
             }
