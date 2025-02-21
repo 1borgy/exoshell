@@ -115,7 +115,7 @@ impl Console {
                     '\r' | '\n' => {
                         self.output_col = 0;
                     }
-                    '\u{7b}' => {
+                    '\u{7f}' => {
                         self.output_col -= 1;
                     }
                     _ => (),
