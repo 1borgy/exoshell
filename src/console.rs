@@ -2,6 +2,7 @@ use crossterm::{cursor, event, style, terminal, QueueableCommand};
 use pyo3::prelude::*;
 use std::io;
 use std::time::Duration;
+use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 use crate::history::History;
@@ -101,39 +102,29 @@ impl Console {
             stdout.queue(cursor::MoveRight(self.output_col))?;
         }
 
-        let lines: Vec<_> = output.split("\n").collect();
+        log::info!(
+            "graphemes: {:?}",
+            UnicodeSegmentation::graphemes(output.as_str(), true).collect::<Vec<_>>()
+        );
 
-        // TODO: rewrite as an iterator over output, instead of splitting lines
-        match lines[..] {
-            [] => {}
-            [line] => {
-                // Not a full line, so add to the output col
-
-                self.output_col +=
-                    UnicodeWidthStr::width(strip_ansi_escapes::strip_str(line).as_str()) as u16;
-
-                // Constrain to window bounds
-                if self.output_col >= self.cols {
-                    self.output_col %= self.cols;
-                    stdout.queue(style::Print("\r\n"))?;
-                }
-
-                self.output_col %= self.cols;
-                stdout.queue(style::Print(format!("{}\r\n", line)))?;
-            }
-            [.., last] => {
-                // Output col is determined by only the last line
-                self.output_col =
-                    UnicodeWidthStr::width(strip_ansi_escapes::strip_str(last).as_str()) as u16;
-
-                for line in lines.iter() {
-                    stdout.queue(style::Print(format!("{}\r\n", line)))?;
+        for grapheme in UnicodeSegmentation::graphemes(output.as_str(), true) {
+            stdout.queue(style::Print(grapheme))?;
+            self.output_col = (self.output_col + 1) % self.cols;
+            for c in grapheme.chars() {
+                match c {
+                    '\r' | '\n' => {
+                        self.output_col = 0;
+                    }
+                    '\u{7b}' => {
+                        self.output_col -= 1;
+                    }
+                    _ => (),
                 }
             }
         }
 
-        if self.output_col == 0 {
-            stdout.queue(cursor::MoveUp(1))?;
+        if self.output_col > 0 {
+            stdout.queue(style::Print("\r\n"))?;
         }
 
         self.shell.write(&self.modes)?;
