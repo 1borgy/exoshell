@@ -6,17 +6,18 @@ use crossterm::{
     style,
 };
 
-#[derive(Clone)]
+#[derive(Debug)]
 pub enum Mode {
     Line,
     Raw,
     Prefix,
 }
 
+#[derive(Debug)]
 pub enum Message {
     ChangeMode(Mode),
     Writeline(String),
-    Write(char),
+    Write(String),
     Quit(),
 }
 
@@ -227,7 +228,7 @@ impl OnKey for Line {
                     self.cursor = 0;
                     None
                 }
-                KeyCode::Char('4') => Some(Message::ChangeMode(Mode::Prefix)),
+                KeyCode::Char('4') | KeyCode::Char('\\') => Some(Message::ChangeMode(Mode::Prefix)),
 
                 // TODO: C-Backspace / C-Left / C-Right
                 _ => None,
@@ -277,7 +278,7 @@ impl OnKey for Raw {
                 modifiers: KeyModifiers::SHIFT,
                 code: KeyCode::Char(c),
                 ..
-            } => Some(Message::Write(c)),
+            } => Some(Message::Write(c.into())),
 
             KeyEvent {
                 kind: KeyEventKind::Press,
@@ -285,9 +286,12 @@ impl OnKey for Raw {
                 code,
                 ..
             } => match code {
-                KeyCode::Enter => Some(Message::Write('\n')),
-                KeyCode::Backspace => Some(Message::Write('\u{7f}')),
-                KeyCode::Esc => Some(Message::Write('\u{1b}')),
+                KeyCode::Enter => Some(Message::Write("\n".into())),
+                KeyCode::Backspace => Some(Message::Write("\u{7f}".into())),
+                KeyCode::Esc => Some(Message::Write("\u{1b}".into())),
+                KeyCode::Tab => Some(Message::Write("\u{09}".into())),
+                KeyCode::Up => Some(Message::Write("\u{1b}[A".into())),
+                KeyCode::Down => Some(Message::Write("\u{1b}[B".into())),
 
                 _ => None,
             },
@@ -298,34 +302,34 @@ impl OnKey for Raw {
                 code,
                 ..
             } => match code {
-                KeyCode::Char('4') => Some(Message::ChangeMode(Mode::Prefix)),
+                KeyCode::Char('4') | KeyCode::Char('\\') => Some(Message::ChangeMode(Mode::Prefix)),
 
-                KeyCode::Char('a') => Some(Message::Write('\u{1}')), // SOH
-                KeyCode::Char('b') => Some(Message::Write('\u{2}')), // STX
-                KeyCode::Char('c') => Some(Message::Write('\u{3}')), // ETX
-                KeyCode::Char('d') => Some(Message::Write('\u{4}')), // EOT
-                KeyCode::Char('e') => Some(Message::Write('\u{5}')), // ENQ
-                KeyCode::Char('f') => Some(Message::Write('\u{6}')), // EOT
-                KeyCode::Char('g') => Some(Message::Write('\u{7}')), // EOT
-                KeyCode::Char('h') => Some(Message::Write('\u{8}')), // BS
-                KeyCode::Char('i') => Some(Message::Write('\u{9}')), // HT
-                KeyCode::Char('j') => Some(Message::Write('\u{a}')), // LF
-                KeyCode::Char('k') => Some(Message::Write('\u{b}')), // VT
-                KeyCode::Char('l') => Some(Message::Write('\u{c}')), // FF
-                KeyCode::Char('m') => Some(Message::Write('\u{d}')), // CR
-                KeyCode::Char('n') => Some(Message::Write('\u{e}')), // SO
-                KeyCode::Char('o') => Some(Message::Write('\u{f}')), // SI
-                KeyCode::Char('p') => Some(Message::Write('\u{10}')), // DLE
-                KeyCode::Char('q') => Some(Message::Write('\u{11}')), // DC1
-                KeyCode::Char('r') => Some(Message::Write('\u{12}')), // DC2
-                KeyCode::Char('s') => Some(Message::Write('\u{13}')), // DC3
-                KeyCode::Char('t') => Some(Message::Write('\u{14}')), // DC4
-                KeyCode::Char('u') => Some(Message::Write('\u{15}')), // NAK
-                KeyCode::Char('v') => Some(Message::Write('\u{16}')), // SYN
-                KeyCode::Char('w') => Some(Message::Write('\u{17}')), // ETB
-                KeyCode::Char('x') => Some(Message::Write('\u{18}')), // CAN
-                KeyCode::Char('y') => Some(Message::Write('\u{19}')), // EM
-                KeyCode::Char('z') => Some(Message::Write('\u{1a}')), // SUB
+                KeyCode::Char('a') => Some(Message::Write("\u{1}".into())), // SOH
+                KeyCode::Char('b') => Some(Message::Write("\u{2}".into())), // STX
+                KeyCode::Char('c') => Some(Message::Write("\u{3}".into())), // ETX
+                KeyCode::Char('d') => Some(Message::Write("\u{4}".into())), // EOT
+                KeyCode::Char('e') => Some(Message::Write("\u{5}".into())), // ENQ
+                KeyCode::Char('f') => Some(Message::Write("\u{6}".into())), // EOT
+                KeyCode::Char('g') => Some(Message::Write("\u{7}".into())), // EOT
+                KeyCode::Char('h') => Some(Message::Write("\u{8}".into())), // BS
+                KeyCode::Char('i') => Some(Message::Write("\u{9}".into())), // HT
+                KeyCode::Char('j') => Some(Message::Write("\u{a}".into())), // LF
+                KeyCode::Char('k') => Some(Message::Write("\u{b}".into())), // VT
+                KeyCode::Char('l') => Some(Message::Write("\u{c}".into())), // FF
+                KeyCode::Char('m') => Some(Message::Write("\u{d}".into())), // CR
+                KeyCode::Char('n') => Some(Message::Write("\u{e}".into())), // SO
+                KeyCode::Char('o') => Some(Message::Write("\u{f}".into())), // SI
+                KeyCode::Char('p') => Some(Message::Write("\u{10}".into())), // DLE
+                KeyCode::Char('q') => Some(Message::Write("\u{11}".into())), // DC1
+                KeyCode::Char('r') => Some(Message::Write("\u{12}".into())), // DC2
+                KeyCode::Char('s') => Some(Message::Write("\u{13}".into())), // DC3
+                KeyCode::Char('t') => Some(Message::Write("\u{14}".into())), // DC4
+                KeyCode::Char('u') => Some(Message::Write("\u{15}".into())), // NAK
+                KeyCode::Char('v') => Some(Message::Write("\u{16}".into())), // SYN
+                KeyCode::Char('w') => Some(Message::Write("\u{17}".into())), // ETB
+                KeyCode::Char('x') => Some(Message::Write("\u{18}".into())), // CAN
+                KeyCode::Char('y') => Some(Message::Write("\u{19}".into())), // EM
+                KeyCode::Char('z') => Some(Message::Write("\u{1a}".into())), // SUB
 
                 _ => None,
             },
@@ -382,7 +386,7 @@ impl OnKey for Prefix {
                 code,
                 ..
             } => match code {
-                KeyCode::Char('4') => Some(Message::ChangeMode(Mode::Line)),
+                KeyCode::Char('4') | KeyCode::Char('\\') => Some(Message::ChangeMode(Mode::Line)),
 
                 _ => None,
             },
@@ -415,6 +419,8 @@ impl Modes {
             Mode::Raw => self.raw.on_key(key),
             Mode::Prefix => self.prefix.on_key(key),
         };
+
+        log::info!("{:?} -> {:?}\r\n", key, message);
 
         match message {
             Some(message) => match message {
