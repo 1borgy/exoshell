@@ -1,6 +1,6 @@
 <div align="center">
   <h1>exoshell</h1>
-  <img src="https://github.com/user-attachments/assets/3b8a78c0-7e1a-41fc-b819-0bfd8f9ff551" width="600">
+  <img src="https://github.com/user-attachments/assets/905729df-4c9f-4016-8f04-903e6096763b" width="600">
   <div>
     <em>A console for the terminal, written in rust.</em>
   </div>
@@ -17,9 +17,8 @@ Exoshell uses [PyO3](https://github.com/PyO3/pyo3) and
 Using exoshell from python:
 
 ```python
-from exoshell import Console, Action
-import colored
-
+from exoshell import Action
+from exoshell import Console
 
 console = Console("exoshell", ("exoshell", "demo"))
 console.start()
@@ -28,12 +27,8 @@ running = True
 while running:
     match console.update(1):
         case Action.Writeline(line):
-            console.print(
-                colored.stylize(f">> {line}", colored.Fore.YELLOW, colored.Style.BOLD)
-            )
-            console.print("\n")
-            console.print(f"echo: {line!r}")
-            console.print("\n")
+            console.print(f">> {line}\n")
+            console.print(f"echo: {line!r}\n")
 
         case Action.Write(c):
             console.print(f"{c}")

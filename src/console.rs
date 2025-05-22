@@ -1,8 +1,7 @@
 use crossterm::{cursor, event, style, terminal, QueueableCommand};
 use pyo3::prelude::*;
-use std::io;
+use std::io::{self, Stdout, Write};
 use std::time::Duration;
-use unicode_width::UnicodeWidthChar;
 
 use crate::history::History;
 use crate::mode::Modes;
@@ -20,7 +19,8 @@ pub struct Console {
     shell: Shell,
     modes: Modes,
     cols: u16,
-    output_col: u16,
+    last_col: u16,
+    stdout: Stdout,
 }
 
 #[pymethods]
@@ -41,25 +41,27 @@ impl Console {
         for title in titles.iter() {
             shell.push_title(title)
         }
+        let stdout = io::stdout();
 
         Ok(Self {
             shell,
             modes: Modes::new(history),
-            output_col: 0,
+            last_col: 0,
             cols,
+            stdout,
         })
     }
 
     pub fn start(&mut self) -> PyResult<()> {
         terminal::enable_raw_mode()?;
-        self.shell.write(&self.modes)?;
-        self.shell.flush()?;
+        self.shell.write(&mut self.stdout, &self.modes)?;
+        self.stdout.flush()?;
         Ok(())
     }
 
     pub fn stop(&mut self) -> PyResult<()> {
-        self.shell.clear()?;
-        self.shell.flush()?;
+        self.shell.clear(&mut self.stdout)?;
+        self.stdout.flush()?;
         terminal::disable_raw_mode()?;
         Ok(())
     }
@@ -67,7 +69,7 @@ impl Console {
     pub fn update(&mut self, timeout_ns: u64) -> PyResult<Option<Action>> {
         if event::poll(Duration::from_nanos(timeout_ns))? {
             let event = event::read()?;
-            self.shell.clear()?;
+            self.shell.clear(&mut self.stdout)?;
 
             let message = match event {
                 event::Event::Key(key) => {
@@ -82,8 +84,8 @@ impl Console {
                 _ => None,
             };
 
-            self.shell.write(&self.modes)?;
-            self.shell.flush()?;
+            self.shell.write(&mut self.stdout, &self.modes)?;
+            self.stdout.flush()?;
 
             Ok(message)
         } else {
@@ -92,42 +94,34 @@ impl Console {
     }
 
     pub fn print(&mut self, output: String) -> PyResult<()> {
-        let mut stdout = io::stdout();
+        self.shell.clear(&mut self.stdout)?;
 
-        self.shell.clear()?;
-
-        if self.output_col > 0 {
-            stdout.queue(cursor::MoveUp(1))?;
-            stdout.queue(cursor::MoveRight(self.output_col))?;
+        // If last print ended mid-line, move back to the saved column
+        if self.last_col > 0 {
+            self.stdout.queue(cursor::MoveUp(1))?;
+            self.stdout.queue(cursor::MoveRight(self.last_col))?;
         }
 
-        stdout.queue(style::Print(&output))?;
+        // Replace all \n with \r\n to force newline in raw mode
+        self.stdout
+            .queue(style::Print(&output.replace("\n", "\r\n")))?;
 
-        for c in output.chars() {
-            match c {
-                '\r' | '\n' => {
-                    self.output_col = 0;
-                }
-                '\u{7f}' => {
-                    self.output_col = self.output_col.saturating_sub(1);
-                    stdout.queue(cursor::MoveLeft(2))?;
-                    stdout.queue(style::Print(" "))?;
-                    stdout.queue(cursor::MoveLeft(1))?;
-                }
-                _ => {
-                    if let Some(width) = UnicodeWidthChar::width(c) {
-                        self.output_col = (self.output_col + width as u16) % self.cols;
-                    }
-                }
-            }
+        // Save column after printing all output
+        let (col, _) = cursor::position()?;
+        self.last_col = col;
+
+        // If we ended mid-line, print a newline for the prompt
+        if self.last_col > 0 {
+            self.stdout.queue(style::Print("\r\n"))?;
         }
 
-        if self.output_col > 0 {
-            stdout.queue(style::Print("\r\n"))?;
+        // If we were at the last character, set col to 0 to wrap
+        if self.last_col >= self.cols - 1 {
+            self.last_col = 0;
         }
 
-        self.shell.write(&self.modes)?;
-        self.shell.flush()?;
+        self.shell.write(&mut self.stdout, &self.modes)?;
+        self.stdout.flush()?;
 
         Ok(())
     }
