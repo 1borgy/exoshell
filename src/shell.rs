@@ -4,7 +4,7 @@ use crossterm::{
     style::{self, Stylize},
     terminal, QueueableCommand,
 };
-use std::io::{self, Write};
+use std::io;
 use unicode_width::UnicodeWidthChar;
 
 struct Border {
@@ -61,14 +61,16 @@ impl Shell {
         self.titles.push(title.to_string());
     }
 
-    pub fn write(&mut self, state: &impl State) -> io::Result<()> {
+    pub fn write(
+        &mut self,
+        stream: &mut impl QueueableCommand,
+        state: &impl State,
+    ) -> io::Result<()> {
         // All relative to inner content
         let width = self.cols - 2;
         let contents = state.contents().to_string();
         let color = state.color();
         let cursor = state.cursor();
-
-        let mut stdout = io::stdout();
 
         let left = '(';
         let right = ')';
@@ -80,7 +82,7 @@ impl Shell {
                 banner.push_left(Component::new(left, title, right))
             });
 
-        stdout.queue(style::PrintStyledContent(
+        stream.queue(style::PrintStyledContent(
             format!(
                 "\r{}{}{}\r\n",
                 self.border.upper_left,
@@ -90,7 +92,7 @@ impl Shell {
             .with(color),
         ))?;
 
-        stdout.queue(style::PrintStyledContent(self.border.vertical.with(color)))?;
+        stream.queue(style::PrintStyledContent(self.border.vertical.with(color)))?;
 
         let mut current_row = 0;
         let mut current_col = 0;
@@ -109,31 +111,31 @@ impl Shell {
             if current_col + char_cols <= width {
                 // if it fits, print it
                 current_col += char_cols;
-                stdout.queue(style::Print(c))?;
+                stream.queue(style::Print(c))?;
             } else {
                 // pad with spaces if we can't fit a full character
                 for _ in current_col..width {
-                    stdout.queue(style::Print(" "))?;
+                    stream.queue(style::Print(" "))?;
                 }
 
                 current_col = char_cols;
                 current_row += 1;
 
                 // print the border character instead
-                stdout.queue(style::PrintStyledContent(
+                stream.queue(style::PrintStyledContent(
                     format!("{0}\r\n{0}", self.border.vertical).with(color),
                 ))?;
-                stdout.queue(style::Print(format!("{}", c)))?;
+                stream.queue(style::Print(format!("{}", c)))?;
             }
         }
 
         self.cursor = (cursor_row, cursor_col); // (row, col)
 
         for _ in 0..(width - current_col) {
-            stdout.queue(style::Print(" "))?;
+            stream.queue(style::Print(" "))?;
         }
 
-        stdout.queue(style::PrintStyledContent(
+        stream.queue(style::PrintStyledContent(
             format!("{}\r\n", self.border.vertical).with(color),
         ))?;
 
@@ -147,7 +149,7 @@ impl Shell {
             footer = footer.push_right(Component::new(left, keybind, right));
         }
 
-        stdout
+        stream
             .queue(style::PrintStyledContent(
                 format!(
                     "{}{}{}\r", // important: no \n
@@ -163,21 +165,13 @@ impl Shell {
         Ok(())
     }
 
-    pub fn clear(&self) -> io::Result<()> {
+    pub fn clear(&self, stream: &mut impl QueueableCommand) -> io::Result<()> {
         let (cursor_row, _) = self.cursor;
 
-        let mut stdout = io::stdout();
+        stream.queue(cursor::MoveUp((cursor_row + 1) as u16))?;
+        stream.queue(style::Print("\r"))?;
+        stream.queue(terminal::Clear(terminal::ClearType::FromCursorDown))?;
 
-        stdout.queue(cursor::MoveUp((cursor_row + 1) as u16))?;
-        stdout.queue(style::Print("\r"))?;
-        stdout.queue(terminal::Clear(terminal::ClearType::FromCursorDown))?;
-
-        Ok(())
-    }
-
-    pub fn flush(&self) -> io::Result<()> {
-        let mut stdout = io::stdout();
-        stdout.flush()?;
         Ok(())
     }
 
