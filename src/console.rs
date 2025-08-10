@@ -29,12 +29,25 @@ impl Console {
     pub fn new(name: String, titles: Vec<String>) -> PyResult<Self> {
         let (cols, _) = terminal::size()?;
 
-        let mut history =
-            History::load_by_name(&name).unwrap_or(History::new(&name).unwrap_or_default());
-
-        if let Err(err) = history.sort() {
-            log::warn!("could not sort history: {:?}", err)
-        }
+        let history = match History::load_by_name(&name) {
+            Ok(history) => {
+                log::debug!("successfully loaded history for {}", name);
+                history
+            }
+            Err(err) => {
+                log::debug!("could not load history for {}: {}", name, err);
+                match History::create(&name) {
+                    Ok(history) => {
+                        log::debug!("created history file for {}", name);
+                        history
+                    }
+                    Err(_) => {
+                        log::debug!("using local history");
+                        History::default()
+                    }
+                }
+            }
+        };
 
         let mut shell = Shell::new(cols)?;
 

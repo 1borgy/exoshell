@@ -420,8 +420,6 @@ impl Modes {
             Mode::Prefix => self.prefix.on_key(key),
         };
 
-        log::info!("{:?} -> {:?}\r\n", key, message);
-
         match message {
             Some(message) => match message {
                 Message::ChangeMode(mode) => {

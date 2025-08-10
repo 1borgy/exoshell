@@ -7,6 +7,7 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::time::SystemTime;
+use std::u128;
 
 use crate::error::Result;
 use crate::path;
@@ -17,21 +18,22 @@ pub struct History {
     entries: Vec<Entry>,
 }
 
-// inspired by zoxide
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Entry {
     pub cmd: String,
     count: u64,
-    timestamp: u64,
+    #[serde(alias = "timestamp")]
+    ts: u128,
 }
 
 impl Entry {
-    fn score(&self, now: u64) -> u64 {
-        match now.saturating_sub(self.timestamp) {
-            0..3600 => self.count * 4,
-            3600..86400 => self.count * 2,
-            86400..604800 => self.count / 2,
-            604800..=u64::MAX => self.count / 4,
+    #[allow(dead_code)] // Unused until Ctrl+R search implemented
+    fn recency_factor(&self, now: u128) -> u64 {
+        match now.saturating_sub(self.ts) {
+            0..3600 => 8,
+            3600..86400 => 4,
+            86400..604800 => 2,
+            604800..=u128::MAX => 1,
         }
     }
 }
@@ -46,12 +48,14 @@ impl Default for History {
 }
 
 impl History {
-    pub fn new(name: impl AsRef<str>) -> Result<Self> {
+    pub fn create(name: impl AsRef<str>) -> Result<Self> {
         let path = path::history_dir()?.join(format!("{}.ron", name.as_ref()));
-        Ok(Self {
+        let self_ = Self {
             path,
             entries: Vec::new(),
-        })
+        };
+        self_.write()?;
+        Ok(self_)
     }
 
     pub fn load_by_name(name: impl AsRef<str>) -> Result<Self> {
@@ -65,7 +69,7 @@ impl History {
         let contents = io::read_to_string(file)?;
         let entries = ron::from_str(contents.as_str())?;
 
-        log::info!("loaded history from {:#?}", path);
+        log::debug!("loaded history from {:#?}", path);
         let history = Self {
             path: path.into(),
             entries,
@@ -83,19 +87,19 @@ impl History {
         let contents = ron::ser::to_string(&self.entries)?;
         let bytes = file.write(contents.as_bytes())?;
 
-        log::info!("wrote {} bytes to {:?}", bytes, self.path);
+        log::debug!("wrote {} bytes to {:?}", bytes, self.path);
         Ok(bytes)
     }
 
     pub fn update(&mut self, cmd: impl AsRef<str>) -> Result<()> {
-        let timestamp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
-        self.add(cmd, timestamp.as_secs());
-        self.sort()?;
+        let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+        self.add(cmd, now.as_nanos());
+        self.sort();
         self.write()?;
         Ok(())
     }
 
-    pub fn add(&mut self, cmd: impl AsRef<str>, timestamp: u64) {
+    pub fn add(&mut self, cmd: impl AsRef<str>, ts: u128) {
         match self
             .entries
             .iter_mut()
@@ -103,28 +107,18 @@ impl History {
         {
             Some(entry) => {
                 entry.count += 1;
-                entry.timestamp = timestamp;
+                entry.ts = ts;
             }
             None => self.entries.push(Entry {
                 cmd: cmd.as_ref().into(),
                 count: 1,
-                timestamp,
+                ts,
             }),
         }
     }
 
-    pub fn sort(&mut self) -> Result<()> {
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)?
-            .as_secs();
-
-        self.entries.sort_by_key(|e| {
-            let score = e.score(now);
-            log::info!("cmd: {}, score: {}", e.cmd, score);
-            score
-        });
-
-        Ok(())
+    pub fn sort(&mut self) {
+        self.entries.sort_by_key(|e| e.ts);
     }
 
     pub fn entries(&mut self) -> &Vec<Entry> {
