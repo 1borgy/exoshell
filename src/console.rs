@@ -107,7 +107,8 @@ impl Console {
     }
 
     pub fn print(&mut self, output: String) -> PyResult<()> {
-        self.shell.clear(&mut self.stdout)?;
+        // self.shell.clear(&mut self.stdout)?;
+        self.shell.move_top_left(&mut self.stdout)?;
 
         // If last print ended mid-line, move back to the saved column
         if self.last_col > 0 {
@@ -115,9 +116,21 @@ impl Console {
             self.stdout.queue(cursor::MoveRight(self.last_col))?;
         }
 
+        let lines = output.split('\n').collect::<Vec<_>>();
+        let num_lines = lines.len();
+        for (index, line) in lines.iter().enumerate() {
+            self.stdout.queue(style::Print(line))?;
+            self.stdout
+                .queue(terminal::Clear(terminal::ClearType::UntilNewLine))?;
+            // \n must be replaced with \r\n to force newline in raw mode
+            if index < num_lines - 1 {
+                self.stdout.queue(style::Print("\r\n"))?;
+            }
+        }
+
         // Replace all \n with \r\n to force newline in raw mode
-        self.stdout
-            .queue(style::Print(&output.replace("\n", "\r\n")))?;
+        // self.stdout
+        //     .queue(style::Print(&output.replace("\n", "\r\n")))?;
 
         // Save column after printing all output
         let (col, _) = cursor::position()?;

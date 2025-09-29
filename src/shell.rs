@@ -175,6 +175,15 @@ impl Shell {
         Ok(())
     }
 
+    pub fn move_top_left(&self, stream: &mut impl QueueableCommand) -> io::Result<()> {
+        let (cursor_row, _) = self.cursor;
+
+        stream.queue(cursor::MoveUp((cursor_row + 1) as u16))?;
+        stream.queue(style::Print("\r"))?;
+
+        Ok(())
+    }
+
     pub fn resize(&mut self, cols: impl Into<usize>) -> io::Result<()> {
         let cols = cols.into();
 
