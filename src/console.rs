@@ -124,7 +124,7 @@ impl Console {
                 .queue(terminal::Clear(terminal::ClearType::UntilNewLine))?;
             // \n must be replaced with \r\n to force newline in raw mode
             if index < num_lines - 1 {
-                self.stdout.queue(style::Print("\r\n"))?;
+                self.stdout.queue(style::Print("\n\r"))?;
             }
         }
 
@@ -138,7 +138,7 @@ impl Console {
 
         // If we ended mid-line, print a newline for the prompt
         if self.last_col > 0 {
-            self.stdout.queue(style::Print("\r\n"))?;
+            self.stdout.queue(style::Print("\n\r"))?;
         }
 
         // If we were at the last character, set col to 0 to wrap
